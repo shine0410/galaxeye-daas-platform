@@ -6,6 +6,7 @@ let tutorialStep = 1;
 let drawingMode = false;
 let currentRectangle = null;
 let isFirstLogin = true;
+let currentHighlight = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -93,7 +94,7 @@ function handleLogin(e) {
     
     if (loginAttempts >= 4) {
         attemptsDiv.innerHTML = `
-            <div style="background: rgba(255, 0, 110, 0.1); border: 1px solid rgba(255, 0, 110, 0.3); padding: 15px; border-radius: 10px; color: #ff006e;">
+            <div style="background: rgba(255, 0, 110, 0.1); border: 1px solid rgba(255, 0, 110, 0.3); padding: 15px; border-radius: 10px; color: #ff006e; margin-top: 15px;">
                 <i class="fas fa-lock"></i> <strong>Account Locked</strong><br>
                 <small>Too many failed attempts. Please reset your password or contact support.</small>
             </div>
@@ -104,7 +105,7 @@ function handleLogin(e) {
     
     // Show attempt counter
     attemptsDiv.innerHTML = `
-        <div style="background: rgba(255, 190, 11, 0.1); border: 1px solid rgba(255, 190, 11, 0.3); padding: 12px; border-radius: 10px; color: #ffbe0b;">
+        <div style="background: rgba(255, 190, 11, 0.1); border: 1px solid rgba(255, 190, 11, 0.3); padding: 12px; border-radius: 10px; color: #ffbe0b; margin-top: 15px;">
             <i class="fas fa-exclamation-triangle"></i> Login attempt ${loginAttempts}/4
         </div>
     `;
@@ -113,7 +114,7 @@ function handleLogin(e) {
         // Success on 3rd attempt for demo
         setTimeout(() => {
             attemptsDiv.innerHTML = `
-                <div style="background: rgba(6, 255, 165, 0.1); border: 1px solid rgba(6, 255, 165, 0.3); padding: 12px; border-radius: 10px; color: #06ffa5;">
+                <div style="background: rgba(6, 255, 165, 0.1); border: 1px solid rgba(6, 255, 165, 0.3); padding: 12px; border-radius: 10px; color: #06ffa5; margin-top: 15px;">
                     <i class="fas fa-check-circle"></i> Login successful! Redirecting...
                 </div>
             `;
@@ -344,7 +345,7 @@ function processFile(file) {
     
     if (!validExtensions.includes(fileExt)) {
         statusDiv.innerHTML = `
-            <div style="background: rgba(255, 0, 110, 0.1); border: 1px solid rgba(255, 0, 110, 0.3); padding: 15px; border-radius: 10px; color: #ff006e;">
+            <div style="background: rgba(255, 0, 110, 0.1); border: 1px solid rgba(255, 0, 110, 0.3); padding: 15px; border-radius: 10px; color: #ff006e; margin-top: 15px;">
                 <i class="fas fa-times-circle"></i> Invalid file format<br>
                 <small>Supported: KML, KMZ, GeoJSON, JSON, TXT, Shapefile (.zip)</small>
             </div>
@@ -355,13 +356,13 @@ function processFile(file) {
     // Check if it's a shapefile
     if (fileExt === '.zip') {
         statusDiv.innerHTML = `
-            <div style="background: rgba(255, 190, 11, 0.1); border: 1px solid rgba(255, 190, 11, 0.3); padding: 15px; border-radius: 10px; color: #ffbe0b;">
+            <div style="background: rgba(255, 190, 11, 0.1); border: 1px solid rgba(255, 190, 11, 0.3); padding: 15px; border-radius: 10px; color: #ffbe0b; margin-top: 15px;">
                 <i class="fas fa-spinner fa-spin"></i> Validating Shapefile components...
             </div>
         `;
         setTimeout(() => {
             statusDiv.innerHTML = `
-                <div style="background: rgba(6, 255, 165, 0.1); border: 1px solid rgba(6, 255, 165, 0.3); padding: 15px; border-radius: 10px; color: #06ffa5;">
+                <div style="background: rgba(6, 255, 165, 0.1); border: 1px solid rgba(6, 255, 165, 0.3); padding: 15px; border-radius: 10px; color: #06ffa5; margin-top: 15px;">
                     <i class="fas fa-check-circle"></i> Shapefile validated! AOI loaded on map.
                 </div>
             `;
@@ -369,7 +370,7 @@ function processFile(file) {
         }, 1500);
     } else {
         statusDiv.innerHTML = `
-            <div style="background: rgba(6, 255, 165, 0.1); border: 1px solid rgba(6, 255, 165, 0.3); padding: 15px; border-radius: 10px; color: #06ffa5;">
+            <div style="background: rgba(6, 255, 165, 0.1); border: 1px solid rgba(6, 255, 165, 0.3); padding: 15px; border-radius: 10px; color: #06ffa5; margin-top: 15px;">
                 <i class="fas fa-check-circle"></i> "${file.name}" uploaded successfully!
             </div>
         `;
@@ -446,15 +447,27 @@ function startTutorial() {
 function showTutorialStep(step) {
     tutorialStep = step;
     
+    // Remove previous highlight
+    removeHighlight();
+    
+    // Hide all steps
     document.querySelectorAll('.tutorial-step').forEach(s => s.classList.remove('active'));
-    document.querySelector(`.tutorial-step[data-step="${step}"]`).classList.add('active');
+    
+    // Show current step
+    const currentStepElement = document.querySelector(`.tutorial-step[data-step="${step}"]`);
+    if (currentStepElement) {
+        currentStepElement.classList.add('active');
+    }
     
     // Update progress dots
     document.querySelectorAll('.progress-dot').forEach((dot, index) => {
         dot.classList.toggle('active', index + 1 === step);
     });
     
+    // Update step indicator
     document.getElementById('tutorial-step-indicator').textContent = `${step} / 6`;
+    
+    // Update buttons
     document.getElementById('prev-btn').disabled = step === 1;
     
     const nextBtn = document.getElementById('next-btn');
@@ -462,6 +475,75 @@ function showTutorialStep(step) {
         nextBtn.innerHTML = '<span>Finish</span><i class="fas fa-check"></i>';
     } else {
         nextBtn.innerHTML = '<span>Next</span><i class="fas fa-arrow-right"></i>';
+    }
+    
+    // Add highlight for current step
+    addHighlight(step);
+}
+
+function addHighlight(step) {
+    let targetElement = null;
+    let highlightConfig = {};
+    
+    switch(step) {
+        case 1:
+            // Welcome - highlight entire sidebar
+            targetElement = document.querySelector('.sidebar');
+            highlightConfig = { padding: 10 };
+            break;
+        case 2:
+            // Upload AOI - highlight upload button
+            targetElement = document.querySelector('.menu-section:first-of-type');
+            highlightConfig = { padding: 15 };
+            break;
+        case 3:
+            // Draw AOI - highlight draw tool button
+            targetElement = document.querySelector('.map-toolbar');
+            highlightConfig = { padding: 15 };
+            break;
+        case 4:
+            // Search - highlight search button
+            targetElement = document.querySelector('[data-tool="search"]')?.parentElement;
+            highlightConfig = { padding: 10 };
+            break;
+        case 5:
+            // Map controls - highlight control section
+            targetElement = document.querySelector('.menu-section:nth-of-type(2)');
+            highlightConfig = { padding: 15 };
+            break;
+        case 6:
+            // Completion - no highlight
+            break;
+    }
+    
+    if (targetElement) {
+        const rect = targetElement.getBoundingClientRect();
+        const padding = highlightConfig.padding || 10;
+        
+        // Create highlight overlay
+        const highlight = document.createElement('div');
+        highlight.className = 'tutorial-highlight';
+        highlight.style.position = 'fixed';
+        highlight.style.top = (rect.top - padding) + 'px';
+        highlight.style.left = (rect.left - padding) + 'px';
+        highlight.style.width = (rect.width + padding * 2) + 'px';
+        highlight.style.height = (rect.height + padding * 2) + 'px';
+        highlight.style.border = '3px solid #ffbe0b';
+        highlight.style.borderRadius = '15px';
+        highlight.style.pointerEvents = 'none';
+        highlight.style.zIndex = '9999';
+        highlight.style.boxShadow = '0 0 0 9999px rgba(0, 0, 0, 0.7)';
+        highlight.style.animation = 'pulse-border 2s ease-in-out infinite';
+        
+        document.body.appendChild(highlight);
+        currentHighlight = highlight;
+    }
+}
+
+function removeHighlight() {
+    if (currentHighlight) {
+        currentHighlight.remove();
+        currentHighlight = null;
     }
 }
 
@@ -480,6 +562,7 @@ function previousTutorialStep() {
 }
 
 function skipTutorial() {
+    removeHighlight();
     document.getElementById('tutorial-overlay').classList.remove('active');
 }
 
@@ -514,7 +597,6 @@ function closeSuccessModal() {
 }
 
 function showNotification(message, type) {
-    // You can implement a toast notification system here
     console.log(`[${type.toUpperCase()}] ${message}`);
 }
 
@@ -523,6 +605,27 @@ window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.classList.remove('active');
     }
+    
+    if (event.target.classList.contains('tutorial-overlay')) {
+        // Don't close tutorial on outside click
+        return;
+    }
 }
+
+// Add CSS for pulse animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse-border {
+        0%, 100% {
+            border-color: #ffbe0b;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 20px #ffbe0b;
+        }
+        50% {
+            border-color: #00d4ff;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 30px #00d4ff;
+        }
+    }
+`;
+document.head.appendChild(style);
 
 console.log('🛰️ GalaxEye Space - Mission Drishti Platform Loaded');
